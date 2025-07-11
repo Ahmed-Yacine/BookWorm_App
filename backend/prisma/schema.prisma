@@ -8,17 +8,117 @@ datasource db {
 }
 
 model User {
-  id               Int      @id @default(autoincrement())
-  email            String   @unique
-  userName         String?  @unique
-  firstName        String
-  lastName         String
-  password         String
-  picture          String   @default("https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y")
-  verificationCode String?
-  isActive         Boolean  @default(true)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                Int            @id @default(autoincrement())
+  email             String         @unique
+  userName          String?        @unique
+  firstName         String
+  lastName          String
+  password          String
+  picture           String         @default("https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y")
+  verificationCode  String?
+  bio               String?        @default("") @db.VarChar(160)
+  location          String?        @default("")
+  followers         User[]         @relation("UserFollows")
+  following         User[]         @relation("UserFollows")
+  posts             Post[]
+  comments          Comment[]
+  likes             Like[]
+  commentLikes      CommentLike[]
+  notifications     notification[] @relation("NotificationToUser")
+  fromNotifications notification[] @relation("NotificationFromUser")
+  isActive          Boolean        @default(true)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 
   @@map("users")
 }
+
+model Post {
+  id            Int            @id @default(autoincrement())
+  userId        Int
+  user          User           @relation(fields: [userId], references: [id])
+  image         String?        @default("")
+  content       String         @db.VarChar(280)
+  comments      Comment[]
+  likes         Like[]
+  notifications notification[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@map("posts")
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  postId    Int
+  userId    Int
+  content   String   @db.VarChar(280)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  post          Post           @relation(fields: [postId], references: [id])
+  user          User           @relation(fields: [userId], references: [id])
+  notifications notification[]
+  likes         CommentLike[]
+
+  @@map("comments")
+}
+
+model Like {
+  id        Int      @id @default(autoincrement())
+  postId    Int
+  userId    Int
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([postId, userId])
+  @@map("likes")
+}
+
+model CommentLike {
+  id        Int      @id @default(autoincrement())
+  commentId Int
+  userId    Int
+  createdAt DateTime @default(now())
+
+  comment Comment @relation(fields: [commentId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@unique([commentId, userId])
+  @@map("comment_likes")
+}
+
+enum NotificationType {
+  LIKE
+  COMMENT
+  COMMENT_LIKE
+  FOLLOW
+}
+
+model notification {
+  id        Int              @id @default(autoincrement())
+  userId    Int
+  type      NotificationType
+  content   String           @db.VarChar(280)
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  // Relationships
+  toUser     User     @relation("NotificationToUser", fields: [userId], references: [id], map: "notifications_to_user_id_fkey")
+  post       Post?    @relation(fields: [postId], references: [id])
+  postId     Int?
+  comment    Comment? @relation(fields: [commentId], references: [id])
+  commentId  Int?
+  fromUser   User     @relation("NotificationFromUser", fields: [fromUserId], references: [id], map: "notifications_from_user_id_fkey")
+  fromUserId Int
+
+  @@map("notifications")
+}
+
+// the uml diagram https://claude.ai/public/artifacts/f4e509fb-c22b-48bc-bccf-b48062a8da0d
+// the code of plantUml 
+// @startuml
+// !theme plain
+// https://img.plantuml.biz/plantuml/svg/lLRRZjem47tFL_YjgRhi1-If5ErAgDoq0lMnCiuGt4tio7OMeMN_lMCxN9o4MwkMXp3CdBcT6SUmd6fD5XeKUOy8VdfS6C9JBskZkCW859JdWQP2Xmaj852kkDAcfSK4RMM9MJTIXMbApaobGk0RABxYZ1eknK2ceN79PPXAUg1NBgNCWGh2TPyP_bQxfjI0uGKGfW35j6yQ-gfCJ_IFZ-xhYqVFf3OnayA0C0dnMHy8BsW6-v-V4s9HtcibyrnkBBknPInnH2EYBis3Ad4JBEUlFd-93vy48IFKrXNAei2ofg81UY2DWj5huB7UCGFpx0e0fGUo4YP616zPqRDjvVfWlDIXetIcv8hd4ADC4oANlu2P9fAjgSXWLcz7BFDqBn_f5h1fAfjXtDPi-uovWXdkJGVo8ugOstxBKjVsMzasDGpNr8qxqDG4_zM28SzsbjqJgEVLOUJQUgNVjXVefsbQ1pW1NLsB578m47VFyleX29omXJcsti-aZUSnH_xhjET6O5TvU7aa_tO0jt1y5rltqMEJ_matPtZOztkcufj6TQca-ZtqFwkQI7Eu96uvoAVu-RO4Ol1nVg6E5yaBq0laTtI-Kh9OtDvzGTLhtsLfCU1D2w6wZFUmLbi4A2nW35hZkGr91L4LfCMHvtKq_FxaXC5qF7wQp4_bdmVZytGqclwmiJwH5yXT4BtcfOxSFutThjUJx_wzczHKXARzAo4X6yMRHhTz2SdmJk_qEciFzYGX2XXSmo0fMOONOu1nSaByjQsZo3NIgdnDTM2fopfaFRKrijAbh4mKxMDrjdU8qq1rXmgq7xBNs-tQ8qxiAS5-le98goB_3G00

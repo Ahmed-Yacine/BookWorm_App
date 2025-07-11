@@ -4,6 +4,7 @@ import { OauthModule } from './oauth/oauth.module';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
 import { MailerModule } from '@nestjs-modules/mailer';
+import { CloudinaryModule } from './cloudinary/cloudinary.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { MailerModule } from '@nestjs-modules/mailer';
     PrismaModule,
     AuthModule,
     OauthModule,
+    CloudinaryModule,
   ],
   controllers: [],
   providers: [],
