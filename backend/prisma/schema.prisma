@@ -18,8 +18,8 @@ model User {
   verificationCode  String?
   bio               String?        @default("") @db.VarChar(160)
   location          String?        @default("")
-  followers         User[]         @relation("UserFollows")
-  following         User[]         @relation("UserFollows")
+  followers         Follows[]      @relation("followers") // Changed to explicit relation
+  following         Follows[]      @relation("following") // Changed to explicit relation
   posts             Post[]
   comments          Comment[]
   likes             Like[]
@@ -31,6 +31,21 @@ model User {
   updatedAt         DateTime       @updatedAt
 
   @@map("users")
+}
+
+// New explicit join table for followers/following relationship
+model Follows {
+  followerId  Int
+  followingId Int
+  follower    User     @relation("followers", fields: [followerId], references: [id])
+  following   User     @relation("following", fields: [followingId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@id([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+
+  @@map("follows")
 }
 
 model Post {
@@ -106,19 +121,16 @@ model notification {
   createdAt DateTime         @default(now())
 
   // Relationships
-  toUser     User     @relation("NotificationToUser", fields: [userId], references: [id], map: "notifications_to_user_id_fkey")
+  toUser     User     @relation("NotificationToUser", fields: [userId], references: [id])
   post       Post?    @relation(fields: [postId], references: [id])
   postId     Int?
   comment    Comment? @relation(fields: [commentId], references: [id])
   commentId  Int?
-  fromUser   User     @relation("NotificationFromUser", fields: [fromUserId], references: [id], map: "notifications_from_user_id_fkey")
+  fromUser   User     @relation("NotificationFromUser", fields: [fromUserId], references: [id])
   fromUserId Int
 
   @@map("notifications")
 }
 
-// the uml diagram https://claude.ai/public/artifacts/f4e509fb-c22b-48bc-bccf-b48062a8da0d
-// the code of plantUml 
-// @startuml
-// !theme plain
-// https://img.plantuml.biz/plantuml/svg/lLRRZjem47tFL_YjgRhi1-If5ErAgDoq0lMnCiuGt4tio7OMeMN_lMCxN9o4MwkMXp3CdBcT6SUmd6fD5XeKUOy8VdfS6C9JBskZkCW859JdWQP2Xmaj852kkDAcfSK4RMM9MJTIXMbApaobGk0RABxYZ1eknK2ceN79PPXAUg1NBgNCWGh2TPyP_bQxfjI0uGKGfW35j6yQ-gfCJ_IFZ-xhYqVFf3OnayA0C0dnMHy8BsW6-v-V4s9HtcibyrnkBBknPInnH2EYBis3Ad4JBEUlFd-93vy48IFKrXNAei2ofg81UY2DWj5huB7UCGFpx0e0fGUo4YP616zPqRDjvVfWlDIXetIcv8hd4ADC4oANlu2P9fAjgSXWLcz7BFDqBn_f5h1fAfjXtDPi-uovWXdkJGVo8ugOstxBKjVsMzasDGpNr8qxqDG4_zM28SzsbjqJgEVLOUJQUgNVjXVefsbQ1pW1NLsB578m47VFyleX29omXJcsti-aZUSnH_xhjET6O5TvU7aa_tO0jt1y5rltqMEJ_matPtZOztkcufj6TQca-ZtqFwkQI7Eu96uvoAVu-RO4Ol1nVg6E5yaBq0laTtI-Kh9OtDvzGTLhtsLfCU1D2w6wZFUmLbi4A2nW35hZkGr91L4LfCMHvtKq_FxaXC5qF7wQp4_bdmVZytGqclwmiJwH5yXT4BtcfOxSFutThjUJx_wzczHKXARzAo4X6yMRHhTz2SdmJk_qEciFzYGX2XXSmo0fMOONOu1nSaByjQsZo3NIgdnDTM2fopfaFRKrijAbh4mKxMDrjdU8qq1rXmgq7xBNs-tQ8qxiAS5-le98goB_3G00
+// class diagramme 
+// https://img.plantuml.biz/plantuml/png/nLTRJzim57xFhpZAf54sIc4FqnI9qLAOLArSD61xG0YPs6aj4Zkp7JAsyjzdEqdZh6aB6zBw4kUSxzo-SsAxVQcGK5aIUzu6735q6nEGYWZ2rKDA92WESifpE1DK9gWhKnBIY8P0Of8GfgGdxoXBaK29OpOyGE7THF2CuI6FkO1NsFuSS1WZAGTA2NgRAJ8AEJkdFmdic3GEIKGP0SAoH494XLIUMSC9LoOsKfIp2nq6Vda0uz7d8_qOdXuV7vrSrAkRKl7fT3m-_UOzEevjR5rRJjKKr9HGeQEG64j038CWiOqWFOk3Iqc4ZVGMA0vWn1JqAOO-9X7AOjL1cUAKXSBoqTdSj4YI81e7SAxhOnFePun-puZLPDhT2Kf8fTnlQ6srhjfATHwBmbGdbtE1cq8QgapCWR07_bIfL0QzNfxdsnE1xf5k-7R8arwnxEsi-UtZlIHz7Uqz-3R2FH7p9WmvhkkmsblAwy9qS5_pTBlz5OdX58dExlkTWfwO5mwQs89ZEGWLlTT-3pYF2M9QfKH9ZsOPAO87Ae13lRYW2QaRmNXUqP-bU14t5vfXA7hxYSSnpsNPtiY-4J4gskp8T8gky2bfp6ESSQcUFJzcIjo8D44JqiAM_cwKDgidpM7xtOUIxPTcRSWJa-kpYqer4svHVnRvNuePqployfKyPq1AElygaR2mVR5ScBF5_lFGcgCWMDYrdzvgAhyGXDsD84AnVDvEu7HgluMnGXO9dbmwoRk7nVmucD9KUlOmy7TzUDFjWfyWzk0N7tXW8xK3gkybg8Atm-m0113hnqe_9IwitzhXZLu6ZTSd6HXMJXf6dYrrVNLji4PrRO2LwNfLb9MK5CwNG5VxB_YeJW0VkjsFrQkUJx-u1GJLWU5L1yVZhDkTpIfjPRvIROvghv5C4wMuMImY-CoTj5RzGYjMnQc6tlCiUwNI3U7AIwFC6hYib_h5q2sWXfCD661isg1lOf6-8zgh9OhDrY2LGDGCaj5gGbBWaJNMNsk_dw2quniVqj_K5yF2XzV0cYfghFqobsBBF6juDSPBBKn9DTmEdRzf1SLDhdDLx3fRvOvulIPqqryP_gRDxtppMklQRNpjkp7qI-khXjoOKTovgkz5M-vzwBh8ZJ9CVhYWDdbbK0ViwwN-s_4R
