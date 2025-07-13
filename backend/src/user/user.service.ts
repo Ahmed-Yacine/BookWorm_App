@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { UpdateUserDto } from './dtos/update-user.dto';
 
 @Injectable()
@@ -37,15 +37,15 @@ export class UserService {
 
   // UserService methods for follow/unfollow functionality
 
-  public async followUser(currentUserId: number, targetUserId: number) {
+  public async toggleFollow(currentUserId: number, targetUserId: number) {
     // Validate inputs
     if (!currentUserId || !targetUserId) {
       throw new BadRequestException('Invalid user IDs provided');
     }
 
-    // Prevent self-following
+    // Prevent self-following/unfollowing
     if (currentUserId === targetUserId) {
-      throw new BadRequestException('You cannot follow yourself');
+      throw new BadRequestException('You cannot follow or unfollow yourself');
     }
 
     // Check if users exist
@@ -68,11 +68,18 @@ export class UserService {
     });
 
     if (existingFollow) {
-      throw new BadRequestException('You are already following this user');
-    }
-
-    try {
-      // Create the follow relationship
+      // Unfollow
+      await this.prismaService.follows.delete({
+        where: {
+          followerId_followingId: {
+            followerId: currentUserId,
+            followingId: targetUserId,
+          },
+        },
+      });
+      return { followed: false };
+    } else {
+      // Follow
       const newFollow = await this.prismaService.follows.create({
         data: {
           followerId: currentUserId,
@@ -90,14 +97,9 @@ export class UserService {
           },
         },
       });
-
       // Create notification
       await this.createFollowNotification(targetUserId, currentUserId);
-
-      return newFollow;
-    } catch (error) {
-      console.error('Error in followUser:', error);
-      throw new BadRequestException('Failed to follow user');
+      return { followed: true, data: newFollow };
     }
   }
 
