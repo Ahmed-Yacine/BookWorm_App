@@ -123,7 +123,7 @@ model notification {
   toUser     User     @relation("NotificationToUser", fields: [userId], references: [id])
   post       Post?    @relation(fields: [postId], references: [id])
   postId     Int?
-  comment    Comment? @relation(fields: [commentId], references: [id])
+  comment    Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
   commentId  Int?
   fromUser   User     @relation("NotificationFromUser", fields: [fromUserId], references: [id])
   fromUserId Int
