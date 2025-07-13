@@ -5,10 +5,10 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import generateTokens from 'src/common/jwt/generateTokens';
-import { PrismaService } from 'src/prisma/prisma.service';
+import generateTokens from '../common/jwt/generateTokens';
+import { PrismaService } from '../prisma/prisma.service';
 import { SignupDto } from './dtos/signup.dto';
-import { JwtPayload } from 'src/common/jwt/jwt.payload';
+import { JwtPayload } from '../common/jwt/jwt.payload';
 import { JwtService } from '@nestjs/jwt';
 import { SigninDto } from './dtos/signin.dto';
 import { MailerService } from '@nestjs-modules/mailer';

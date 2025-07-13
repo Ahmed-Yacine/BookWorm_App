@@ -44,7 +44,6 @@ model Follows {
   @@id([followerId, followingId])
   @@index([followerId])
   @@index([followingId])
-
   @@map("follows")
 }
 
@@ -71,7 +70,7 @@ model Comment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  post          Post           @relation(fields: [postId], references: [id])
+  post          Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
   user          User           @relation(fields: [userId], references: [id])
   notifications notification[]
   likes         CommentLike[]

@@ -11,6 +11,7 @@ import {
   UseGuards,
   Param,
   ParseIntPipe,
+  Request,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UpdateUserDto } from './dtos/update-user.dto';
@@ -61,8 +62,8 @@ export class UserController {
 
   @HttpCode(HttpStatus.OK)
   @UseGuards(AuthGuard)
-  @Post('follow/:targetUserId')
-  public async followUser(
+  @Post('toggle-follow/:targetUserId')
+  public async toggleFollowUser(
     @Req() req: any,
     @Param('targetUserId', ParseIntPipe) targetUserId: number,
   ) {
@@ -70,41 +71,19 @@ export class UserController {
       if (!req.user?.id) {
         throw new BadRequestException('User not authenticated properly');
       }
-
       const currentUserId = parseInt(req.user.id);
       if (isNaN(currentUserId)) {
         throw new BadRequestException('Invalid user ID in token');
       }
-
-      const result = await this.userService.followUser(
+      const result = await this.userService.toggleFollow(
         currentUserId,
         targetUserId,
       );
       return {
-        message: 'User followed successfully',
-        data: result,
-      };
-    } catch (error) {
-      console.error('Error in followUser controller:', error);
-      throw new BadRequestException(error.message);
-    }
-  }
-
-  @HttpCode(HttpStatus.OK)
-  @UseGuards(AuthGuard)
-  @Post('unfollow/:targetUserId')
-  public async unfollowUser(
-    @Req() req: any,
-    @Param('targetUserId', ParseIntPipe) targetUserId: number,
-  ) {
-    try {
-      const result = await this.userService.unfollowUser(
-        req.user.id,
-        targetUserId,
-      );
-      return {
-        message: 'User unfollowed successfully',
-        data: result,
+        message: result.followed
+          ? 'User followed successfully'
+          : 'User unfollowed successfully',
+        data: result.data || null,
       };
     } catch (error) {
       throw new BadRequestException(error.message);
@@ -115,7 +94,7 @@ export class UserController {
   @UseGuards(AuthGuard)
   @Get('is-following/:targetUserId')
   public async isFollowing(
-    @Req() req: any,
+    @Request() req: any,
     @Param('targetUserId', ParseIntPipe) targetUserId: number,
   ) {
     try {

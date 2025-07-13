@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
-import { JwtPayload } from 'src/common/jwt/jwt.payload';
-import generateTokens from 'src/common/jwt/generateTokens';
+import { JwtPayload } from '../common/jwt/jwt.payload';
+import generateTokens from '../common/jwt/generateTokens';
 import * as bcrypt from 'bcrypt';
 
 type UserData = {
