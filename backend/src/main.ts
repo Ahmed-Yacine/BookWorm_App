@@ -7,7 +7,13 @@ import * as cookieParser from 'cookie-parser';
 import * as passport from 'passport';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { cors: true });
+  const app = await NestFactory.create(AppModule);
+  app.enableCors({
+    origin: true, // Allow all origins
+    credentials: true, // Allow cookies, authorization headers, etc.
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    allowedHeaders: '*',
+  });
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
   app.use(cookieParser());
   app.use(sessionMiddleware());
