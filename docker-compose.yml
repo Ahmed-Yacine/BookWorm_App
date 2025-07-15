@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    container_name: nest_backend
+    ports:
+      - '3000:3000'
+    depends_on:
+      - db
+      - migrate # Wait for migrations to complete
+    volumes:
+      - ./:/app
+      - /app/node_modules
+    command: npm run start:dev
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://postgres:pass123@db:5432/postgres?schema=public
+
+  db:
+    image: postgres
+    restart: always
+    container_name: postgres_db
+    ports:
+      - '5433:5432'
+    environment:
+      POSTGRES_PASSWORD: pass123
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  migrate:
+    build: .
+    container_name: nest_migrate
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./:/app
+      - /app/node_modules
+    command: >
+      sh -c "sleep 5 &&
+      npx prisma migrate reset --force &&
+      npx prisma migrate dev --name init"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://postgres:pass123@db:5432/postgres?schema=public
+      NODE_ENV: developmen
+
+volumes:
+  postgres_data:

@@ -1,0 +1,135 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                Int            @id @default(autoincrement())
+  email             String         @unique
+  userName          String?        @unique
+  firstName         String
+  lastName          String
+  password          String
+  picture           String         @default("https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y")
+  verificationCode  String?
+  bio               String?        @default("") @db.VarChar(160)
+  location          String?        @default("")
+  followers         Follows[]      @relation("followers") // Changed to explicit relation
+  following         Follows[]      @relation("following") // Changed to explicit relation
+  posts             Post[]
+  comments          Comment[]
+  likes             Like[]
+  commentLikes      CommentLike[]
+  notifications     notification[] @relation("NotificationToUser")
+  fromNotifications notification[] @relation("NotificationFromUser")
+  isActive          Boolean        @default(true)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@map("users")
+}
+
+// New explicit join table for followers/following relationship
+model Follows {
+  followerId  Int
+  followingId Int
+  follower    User     @relation("followers", fields: [followerId], references: [id])
+  following   User     @relation("following", fields: [followingId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@id([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+  @@map("follows")
+}
+
+model Post {
+  id            Int            @id @default(autoincrement())
+  userId        Int
+  user          User           @relation(fields: [userId], references: [id])
+  image         String?        @default("")
+  content       String         @db.VarChar(280)
+  comments      Comment[]
+  likes         Like[]
+  notifications notification[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@map("posts")
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  postId    Int
+  userId    Int
+  content   String   @db.VarChar(280)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  post          Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user          User           @relation(fields: [userId], references: [id])
+  notifications notification[]
+  likes         CommentLike[]
+
+  @@map("comments")
+}
+
+model Like {
+  id        Int      @id @default(autoincrement())
+  postId    Int
+  userId    Int
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([postId, userId])
+  @@map("likes")
+}
+
+model CommentLike {
+  id        Int      @id @default(autoincrement())
+  commentId Int
+  userId    Int
+  createdAt DateTime @default(now())
+
+  comment Comment @relation(fields: [commentId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@unique([commentId, userId])
+  @@map("comment_likes")
+}
+
+enum NotificationType {
+  LIKE
+  COMMENT
+  COMMENT_LIKE
+  FOLLOW
+}
+
+model notification {
+  id        Int              @id @default(autoincrement())
+  userId    Int
+  type      NotificationType
+  content   String           @db.VarChar(280)
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  // Relationships
+  toUser     User     @relation("NotificationToUser", fields: [userId], references: [id])
+  post       Post?    @relation(fields: [postId], references: [id])
+  postId     Int?
+  comment    Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  commentId  Int?
+  fromUser   User     @relation("NotificationFromUser", fields: [fromUserId], references: [id])
+  fromUserId Int
+
+  @@map("notifications")
+}
+
+// class diagramme 
+// https://img.plantuml.biz/plantuml/png/nLTRJzim57xFhpZAf54sIc4FqnI9qLAOLArSD61xG0YPs6aj4Zkp7JAsyjzdEqdZh6aB6zBw4kUSxzo-SsAxVQcGK5aIUzu6735q6nEGYWZ2rKDA92WESifpE1DK9gWhKnBIY8P0Of8GfgGdxoXBaK29OpOyGE7THF2CuI6FkO1NsFuSS1WZAGTA2NgRAJ8AEJkdFmdic3GEIKGP0SAoH494XLIUMSC9LoOsKfIp2nq6Vda0uz7d8_qOdXuV7vrSrAkRKl7fT3m-_UOzEevjR5rRJjKKr9HGeQEG64j038CWiOqWFOk3Iqc4ZVGMA0vWn1JqAOO-9X7AOjL1cUAKXSBoqTdSj4YI81e7SAxhOnFePun-puZLPDhT2Kf8fTnlQ6srhjfATHwBmbGdbtE1cq8QgapCWR07_bIfL0QzNfxdsnE1xf5k-7R8arwnxEsi-UtZlIHz7Uqz-3R2FH7p9WmvhkkmsblAwy9qS5_pTBlz5OdX58dExlkTWfwO5mwQs89ZEGWLlTT-3pYF2M9QfKH9ZsOPAO87Ae13lRYW2QaRmNXUqP-bU14t5vfXA7hxYSSnpsNPtiY-4J4gskp8T8gky2bfp6ESSQcUFJzcIjo8D44JqiAM_cwKDgidpM7xtOUIxPTcRSWJa-kpYqer4svHVnRvNuePqployfKyPq1AElygaR2mVR5ScBF5_lFGcgCWMDYrdzvgAhyGXDsD84AnVDvEu7HgluMnGXO9dbmwoRk7nVmucD9KUlOmy7TzUDFjWfyWzk0N7tXW8xK3gkybg8Atm-m0113hnqe_9IwitzhXZLu6ZTSd6HXMJXf6dYrrVNLji4PrRO2LwNfLb9MK5CwNG5VxB_YeJW0VkjsFrQkUJx-u1GJLWU5L1yVZhDkTpIfjPRvIROvghv5C4wMuMImY-CoTj5RzGYjMnQc6tlCiUwNI3U7AIwFC6hYib_h5q2sWXfCD661isg1lOf6-8zgh9OhDrY2LGDGCaj5gGbBWaJNMNsk_dw2quniVqj_K5yF2XzV0cYfghFqobsBBF6juDSPBBKn9DTmEdRzf1SLDhdDLx3fRvOvulIPqqryP_gRDxtppMklQRNpjkp7qI-khXjoOKTovgkz5M-vzwBh8ZJ9CVhYWDdbbK0ViwwN-s_4R
